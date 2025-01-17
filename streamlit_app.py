@@ -46,10 +46,7 @@ if activity == "Custom Activity":
     custom_activity = st.text_input("Custom Activity Name")
     activity_color = st.color_picker("Pick a Color", value="#0000FF")
     if custom_activity and activity_color:
-        if custom_activity not in st.session_state['custom_colors']:
-            st.session_state['custom_colors'][custom_activity] = activity_color
-        elif st.session_state['custom_colors'][custom_activity] != activity_color:
-            st.session_state['custom_colors'][custom_activity] = activity_color
+        st.session_state['custom_colors'][custom_activity] = activity_color
 else:
     custom_activity = activity_color = None
 
@@ -87,10 +84,13 @@ if st.session_state['schedule']:
 # If an entry is selected for editing
 if 'edit_index' in st.session_state:
     st.subheader("Edit Entry")
-    edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]))
-    edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1])
-    edit_end_time = st.time_input("End Time", value=st.session_state['edit_entry'][2])
-    edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors))
+    days_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    edit_day = st.selectbox("Day", days_of_week, index=days_of_week.index(st.session_state['edit_entry'][0]))
+    edit_start_time = st.time_input("Start Time", value=st.datetime.strptime(st.session_state['edit_entry'][1], "%H:%M").time())
+    edit_end_time = st.time_input("End Time", value=st.datetime.strptime(st.session_state['edit_entry'][2], "%H:%M").time())
+    all_activities = list(colors.keys()) + ["Custom Activity"]
+    default_activity_index = all_activities.index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in all_activities else len(all_activities) - 1
+    edit_activity = st.selectbox("Activity", all_activities, index=default_activity_index)
 
     if st.button("Update Entry"):
         updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), edit_end_time.strftime("%H:%M"), edit_activity)
@@ -100,7 +100,6 @@ if 'edit_index' in st.session_state:
         st.success("Entry updated!")
         st.experimental_rerun()
 
-    
 # Plot schedule
 if st.session_state['schedule']:
     day_labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][::-1]
