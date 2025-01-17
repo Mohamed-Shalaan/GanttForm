@@ -43,10 +43,11 @@ if planning_mode == "AI Assisted":
     sleep_goal = st.slider("Sleep Duration (hours)", 4, 10, 7)
 
     if wake_time:
-        breakfast_time = (wake_time + timedelta(minutes=30)).strftime("%H:%M")
-        lunch_time = (wake_time + timedelta(hours=work_hours // 2)).strftime("%H:%M")
-        dinner_time = (wake_time + timedelta(hours=work_hours + transport_duration + 1)).strftime("%H:%M")
-        sleep_time = (wake_time + timedelta(hours=24 - sleep_goal)).strftime("%H:%M")
+        wake_datetime = datetime.combine(datetime.today(), wake_time)
+        breakfast_time = (wake_datetime + timedelta(minutes=30)).time().strftime("%H:%M")
+        lunch_time = (wake_datetime + timedelta(hours=work_hours // 2)).time().strftime("%H:%M")
+        dinner_time = (wake_datetime + timedelta(hours=work_hours + transport_duration + 1)).time().strftime("%H:%M")
+        sleep_time = (wake_datetime + timedelta(hours=24 - sleep_goal)).time().strftime("%H:%M")
 
         st.session_state['schedule'] = [
             ("Monday", wake_time.strftime("%H:%M"), sleep_time, "Sleep"),
