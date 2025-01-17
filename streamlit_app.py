@@ -108,7 +108,7 @@ if st.session_state['schedule']:
             if st.button(f"Delete {index + 1}"):
                 del st.session_state['schedule'][index]
                 st.success("Entry deleted!")
-                st.experimental_rerun()
+                st.rerun()
 
 # If an entry is selected for editing
 if 'edit_index' in st.session_state:
@@ -124,7 +124,7 @@ if 'edit_index' in st.session_state:
         del st.session_state['edit_index']  # Clear edit state
         del st.session_state['edit_entry']
         st.success("Entry updated!")
-        st.experimental_rerun()
+        st.rerun()
 
 # Plot schedule
 if st.session_state['schedule']:
