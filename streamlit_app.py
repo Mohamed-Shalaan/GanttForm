@@ -66,14 +66,43 @@ if st.button("Add to Schedule"):
     else:
         st.error("Please enter valid start and end times.")
 
-# Display current schedule
+# Display current schedule with edit and delete buttons
 if st.session_state['schedule']:
     st.subheader("Current Schedule")
-    for entry in st.session_state['schedule']:
+    for index, entry in enumerate(st.session_state['schedule']):
         color_display = st.session_state['custom_colors'].get(entry[3], colors.get(entry[3], 'blue'))
-        st.write(f"{entry[0]}: {entry[1]} to {entry[2]} - {entry[3]} ({color_display})")
+        st.write(f"{index + 1}. {entry[0]}: {entry[1]} to {entry[2]} - {entry[3]} ({color_display})")
+        
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            if st.button(f"Edit {index + 1}"):
+                st.session_state['edit_index'] = index
+                st.session_state['edit_entry'] = entry  # Store the entry being edited
+        with col2:
+            if st.button(f"Delete {index + 1}"):
+                del st.session_state['schedule'][index]
+                st.success("Entry deleted!")
+                st.experimental_rerun()
 
-    # Plot schedule
+# If an entry is selected for editing
+if 'edit_index' in st.session_state:
+    st.subheader("Edit Entry")
+    edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]))
+    edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1])
+    edit_end_time = st.time_input("End Time", value=st.session_state['edit_entry'][2])
+    edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors))
+
+    if st.button("Update Entry"):
+        updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), edit_end_time.strftime("%H:%M"), edit_activity)
+        st.session_state['schedule'][st.session_state['edit_index']] = updated_entry
+        del st.session_state['edit_index']  # Clear edit state
+        del st.session_state['edit_entry']
+        st.success("Entry updated!")
+        st.experimental_rerun()
+
+    
+# Plot schedule
+if st.session_state['schedule']:
     day_labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][::-1]
     day_indices = {day: i for i, day in enumerate(day_labels)}
 
