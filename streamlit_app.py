@@ -1,7 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
-from datetime import timedelta
+from datetime import timedelta, datetime, time
 
 # Function to parse time into hours as a float
 def parse_time(time_str):
@@ -47,7 +47,7 @@ if planning_mode == "AI Assisted":
         breakfast_time = (wake_datetime + timedelta(minutes=30)).time().strftime("%H:%M")
         lunch_time = (wake_datetime + timedelta(hours=work_hours // 2)).time().strftime("%H:%M")
         dinner_time = (wake_datetime + timedelta(hours=work_hours + transport_duration + 1)).time().strftime("%H:%M")
-        sleep_time = (wake_datetime + timedelta(hours=24 - sleep_goal)).time().strftime("%H:%M")
+        sleep_time = (wake_datetime + timedelta(hours=sleep_goal)).time().strftime("%H:%M")
 
         st.session_state['schedule'] = [
             ("Monday", wake_time.strftime("%H:%M"), sleep_time, "Sleep"),
