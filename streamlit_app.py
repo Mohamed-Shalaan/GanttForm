@@ -1,6 +1,7 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 from io import BytesIO
+from datetime import timedelta
 
 # Function to parse time into hours as a float
 def parse_time(time_str):
@@ -17,10 +18,9 @@ def parse_time(time_str):
 
 # Color coding for activities
 colors = {
-    "At Work": 'red',
-    "HomeXBusiness": 'green',
-    "Trans.2.W": '#B61515',
-    "Trans.2.H": '#288057',
+    "Work": 'red',
+    "Home": 'green',
+    "Trans": '#B61515',
     "Sleep": '#AB10B4',
 }
 
@@ -32,36 +32,64 @@ if 'custom_colors' not in st.session_state:
 
 st.title("Weekly Schedule Plot Generator")
 
-# User inputs
-col1, col2, col3 = st.columns(3)
-with col1:
-    day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
-with col2:
-    start_time = st.time_input("Start Time", value=None, key="start")
-with col3:
-    end_time = st.time_input("End Time", value=None, key="end")
-activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
+# Option for AI-assisted planning
+planning_mode = st.radio("Select Planning Mode", ("Fully Manual Planner", "AI Assisted"))
 
-if activity == "Custom Activity":
-    custom_activity = st.text_input("Custom Activity Name")
-    activity_color = st.color_picker("Pick a Color", value="#0000FF")
-    if custom_activity and activity_color:
-        st.session_state['custom_colors'][custom_activity] = activity_color
+if planning_mode == "AI Assisted":
+    st.subheader("AI-Assisted Schedule")
+    wake_time = st.time_input("Wake-up Time")
+    work_hours = st.slider("Work Duration (hours)", 4, 12, 8)
+    transport_duration = st.slider("Commute Time (hours)", 0.5, 3.0, 1.0)
+    sleep_goal = st.slider("Sleep Duration (hours)", 4, 10, 7)
+
+    if wake_time:
+        breakfast_time = (wake_time + timedelta(minutes=30)).strftime("%H:%M")
+        lunch_time = (wake_time + timedelta(hours=work_hours // 2)).strftime("%H:%M")
+        dinner_time = (wake_time + timedelta(hours=work_hours + transport_duration + 1)).strftime("%H:%M")
+        sleep_time = (wake_time + timedelta(hours=24 - sleep_goal)).strftime("%H:%M")
+
+        st.session_state['schedule'] = [
+            ("Monday", wake_time.strftime("%H:%M"), sleep_time, "Sleep"),
+            ("Monday", breakfast_time, lunch_time, "Home"),
+            ("Monday", lunch_time, dinner_time, "Work"),
+            ("Monday", dinner_time, sleep_time, "Trans"),
+        ]
+        st.success("AI-assisted schedule generated!")
+
 else:
-    custom_activity = activity_color = None
+    # Manual user inputs
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
+    with col2:
+        start_time = st.time_input("Start Time", value=None, key="start")
+    with col3:
+        end_time = st.time_input("End Time", value=None, key="end")
+    activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
 
-# Add to schedule
-if st.button("Add to Schedule"):
-    if custom_activity and activity_color:
-        activity = custom_activity  # Use the custom activity
-
-    if start_time and end_time:
-        start_time_str = start_time.strftime("%H:%M")
-        end_time_str = end_time.strftime("%H:%M")
-        st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
-        st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
+    if activity == "Custom Activity":
+        custom_activity = st.text_input("Custom Activity Name")
+        activity_color = st.color_picker("Pick a Color", value="#0000FF")
+        if custom_activity and activity_color:
+            if custom_activity not in st.session_state['custom_colors']:
+                st.session_state['custom_colors'][custom_activity] = activity_color
+            elif st.session_state['custom_colors'][custom_activity] != activity_color:
+                st.session_state['custom_colors'][custom_activity] = activity_color
     else:
-        st.error("Please enter valid start and end times.")
+        custom_activity = activity_color = None
+
+    # Add to schedule
+    if st.button("Add to Schedule"):
+        if custom_activity and activity_color:
+            activity = custom_activity  # Use the custom activity
+
+        if start_time and end_time:
+            start_time_str = start_time.strftime("%H:%M")
+            end_time_str = end_time.strftime("%H:%M")
+            st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
+            st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
+        else:
+            st.error("Please enter valid start and end times.")
 
 # Display current schedule with edit and delete buttons
 if st.session_state['schedule']:
@@ -84,13 +112,10 @@ if st.session_state['schedule']:
 # If an entry is selected for editing
 if 'edit_index' in st.session_state:
     st.subheader("Edit Entry")
-    days_of_week = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    edit_day = st.selectbox("Day", days_of_week, index=days_of_week.index(st.session_state['edit_entry'][0]))
-    edit_start_time = st.time_input("Start Time", value=st.datetime.strptime(st.session_state['edit_entry'][1], "%H:%M").time())
-    edit_end_time = st.time_input("End Time", value=st.datetime.strptime(st.session_state['edit_entry'][2], "%H:%M").time())
-    all_activities = list(colors.keys()) + ["Custom Activity"]
-    default_activity_index = all_activities.index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in all_activities else len(all_activities) - 1
-    edit_activity = st.selectbox("Activity", all_activities, index=default_activity_index)
+    edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]))
+    edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1])
+    edit_end_time = st.time_input("End Time", value=st.session_state['edit_entry'][2])
+    edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors))
 
     if st.button("Update Entry"):
         updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), edit_end_time.strftime("%H:%M"), edit_activity)
@@ -135,20 +160,17 @@ if st.session_state['schedule']:
     grid_alpha = st.slider("Grid Line Transparency", 0.1, 1.0, 0.5)
     plt.grid(True, linestyle=grid_linestyle, alpha=grid_alpha)
 
+    # Display plot
     st.pyplot(fig)
 
-    # Add download button
+    # Option to download the schedule as an image
     buf = BytesIO()
-    fig.savefig(buf, format="png")
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
     st.download_button(
         label="Download Schedule as Image",
-        data=buf.getvalue(),
-        file_name="weekly_schedule.png",
-        mime="image/png"
+        data=buf,
+        file_name="schedule_plot.png",
+        mime="image/png",
     )
-
-# Clear schedule button
-if st.button("Clear Schedule"):
-    st.session_state['schedule'] = []
-    st.session_state['custom_colors'] = {}
-    st.success("Schedule cleared!")
+    buf.close()
