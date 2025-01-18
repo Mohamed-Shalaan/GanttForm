@@ -45,7 +45,7 @@ if st.session_state.get('planning_mode') != planning_mode:
 
 
 # Manual user inputs
-col1, col2, col3, col4 = st.columns(4) # Corrected the layout to use 4 columns
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
 with col2:
@@ -104,13 +104,12 @@ if st.session_state['schedule']:
 # If an entry is selected for editing
 if 'edit_index' in st.session_state:
     st.subheader("Edit Entry")
-    edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]))
-    edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1])
-    
-    # Added the edit duration
+    # Start of the modified section
+    edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]), key="edit_day")
+    edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1], key="edit_start_time")
     edit_duration = st.number_input("Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, value=1.0, key = "edit_duration")
-    
-    edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors))
+    edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors), key="edit_activity")
+    # End of the modified section
 
     if st.button("Update Entry"):
          start_datetime = datetime.combine(datetime.today(), edit_start_time)
