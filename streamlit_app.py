@@ -92,14 +92,17 @@ if st.session_state['schedule']:
 
         col1, col2 = st.columns([1, 1])
         with col1:
-            if st.button(f"Edit {index + 1}"):
+            if st.button(f"Edit {index + 1}", key=f"edit_button_{index}"):
                 st.session_state['edit_index'] = index
                 st.session_state['edit_entry'] = entry  # Store the entry being edited
         with col2:
-            if st.button(f"Delete {index + 1}"):
+            def delete_entry(index):
                 del st.session_state['schedule'][index]
                 st.success("Entry deleted!")
-                st.experimental_rerun()
+                st.rerun()
+            if st.button(f"Delete {index + 1}", key=f"delete_button_{index}", on_click=delete_entry, args=(index,)):
+                 pass
+
 
 # If an entry is selected for editing
 if 'edit_index' in st.session_state:
@@ -111,7 +114,7 @@ if 'edit_index' in st.session_state:
     edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors), key="edit_activity")
     # End of the modified section
 
-    if st.button("Update Entry"):
+    if st.button("Update Entry", key="update_button"):
          start_datetime = datetime.combine(datetime.today(), edit_start_time)
          end_datetime = start_datetime + timedelta(hours=edit_duration)
          end_time_str = end_datetime.time().strftime("%H:%M")
@@ -121,7 +124,7 @@ if 'edit_index' in st.session_state:
          del st.session_state['edit_index']  # Clear edit state
          del st.session_state['edit_entry']
          st.success("Entry updated!")
-         st.experimental_rerun()
+         st.rerun()
 
 # Plot schedule
 if st.session_state['schedule']:
