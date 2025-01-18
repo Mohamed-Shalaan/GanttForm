@@ -51,18 +51,22 @@ if planning_mode == "AI Assisted":
 
     responsibilities = []
 
+    #  Start of the modified section
+    responsibility_count = 0
     while True:
-        responsibility_type = st.selectbox(f"Responsibility #{len(responsibilities) + 1} Type", ["Work", "School", "Transportation", "Other"], key=f"type_{len(responsibilities)}")
-        start_time = st.time_input(f"Responsibility #{len(responsibilities) + 1} Start Time", key=f"start_{len(responsibilities)}", value=None)
-        duration = st.number_input(f"Responsibility #{len(responsibilities) + 1} Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, key=f"duration_{len(responsibilities)}", value=None)
-
+        responsibility_type = st.selectbox(f"Responsibility #{responsibility_count + 1} Type", ["Work", "School", "Transportation", "Other"], key=f"type_{responsibility_count}")
+        start_time = st.time_input(f"Responsibility #{responsibility_count + 1} Start Time", key=f"start_{responsibility_count}", value=None)
+        duration = st.number_input(f"Responsibility #{responsibility_count + 1} Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, key=f"duration_{responsibility_count}", value=None)
+      
         if start_time is not None and duration is not None:
           responsibilities.append((responsibility_type, start_time, duration))
 
-        add_more = st.checkbox(f"Add another responsibility #{len(responsibilities) + 1}?", key=f"add_another_{len(responsibilities)}")
+        add_more = st.checkbox(f"Add another responsibility #{responsibility_count + 1}?", key=f"add_another_{responsibility_count}")
 
         if not add_more:
             break
+        responsibility_count +=1
+    #  End of the modified section
 
 
     if st.button("Generate Schedule"):
