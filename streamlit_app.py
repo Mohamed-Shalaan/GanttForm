@@ -51,7 +51,6 @@ if planning_mode == "AI Assisted":
 
     responsibilities = []
 
-    #  Start of the modified section
     responsibility_count = 0
     while True:
         responsibility_type = st.selectbox(f"Responsibility #{responsibility_count + 1} Type", ["Work", "School", "Transportation", "Other"], key=f"type_{responsibility_count}")
@@ -66,7 +65,6 @@ if planning_mode == "AI Assisted":
         if not add_more:
             break
         responsibility_count +=1
-    #  End of the modified section
 
 
     if st.button("Generate Schedule"):
@@ -106,16 +104,17 @@ if planning_mode == "AI Assisted":
 
 
 
-else:  # Fully Manual Planner
+else: # Fully Manual Planner
     # Manual user inputs
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4) # Modified to include a fourth column
     with col1:
         day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
     with col2:
         start_time = st.time_input("Start Time", value=None, key="start")
     with col3:
-        end_time = st.time_input("End Time", value=None, key="end")
-    activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
+        duration = st.number_input("Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, value=1.0, key="duration") # Added duration
+    with col4:
+        activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
 
     if activity == "Custom Activity":
         custom_activity = st.text_input("Custom Activity Name")
@@ -133,13 +132,16 @@ else:  # Fully Manual Planner
         if custom_activity and activity_color:
             activity = custom_activity  # Use the custom activity
 
-        if start_time and end_time:
+        if start_time and duration:
             start_time_str = start_time.strftime("%H:%M")
-            end_time_str = end_time.strftime("%H:%M")
+            
+            start_datetime = datetime.combine(datetime.today(), start_time)
+            end_datetime = start_datetime + timedelta(hours=duration)
+            end_time_str = end_datetime.time().strftime("%H:%M")
             st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
             st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
         else:
-            st.error("Please enter valid start and end times.")
+            st.error("Please enter valid start time and duration.")
 
 
 # Display current schedule with edit and delete buttons
@@ -165,16 +167,23 @@ if 'edit_index' in st.session_state:
     st.subheader("Edit Entry")
     edit_day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], index=["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].index(st.session_state['edit_entry'][0]))
     edit_start_time = st.time_input("Start Time", value=st.session_state['edit_entry'][1])
-    edit_end_time = st.time_input("End Time", value=st.session_state['edit_entry'][2])
+    
+    # Added the edit duration
+    edit_duration = st.number_input("Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, value=1.0, key = "edit_duration")
+    
     edit_activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"], index=list(colors.keys()).index(st.session_state['edit_entry'][3]) if st.session_state['edit_entry'][3] in colors else len(colors))
 
     if st.button("Update Entry"):
-        updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), edit_end_time.strftime("%H:%M"), edit_activity)
-        st.session_state['schedule'][st.session_state['edit_index']] = updated_entry
-        del st.session_state['edit_index']  # Clear edit state
-        del st.session_state['edit_entry']
-        st.success("Entry updated!")
-        st.experimental_rerun()
+         start_datetime = datetime.combine(datetime.today(), edit_start_time)
+         end_datetime = start_datetime + timedelta(hours=edit_duration)
+         end_time_str = end_datetime.time().strftime("%H:%M")
+         updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), end_time_str, edit_activity)
+
+         st.session_state['schedule'][st.session_state['edit_index']] = updated_entry
+         del st.session_state['edit_index']  # Clear edit state
+         del st.session_state['edit_entry']
+         st.success("Entry updated!")
+         st.experimental_rerun()
 
 # Plot schedule
 if st.session_state['schedule']:
