@@ -30,7 +30,7 @@ if 'schedule' not in st.session_state:
 if 'custom_colors' not in st.session_state:
     st.session_state['custom_colors'] = {}
 if 'planning_mode' not in st.session_state:
-     st.session_state['planning_mode'] = 'Fully Manual Planner'
+    st.session_state['planning_mode'] = 'Fully Manual Planner'
 
 st.title("Weekly Schedule Plot Generator")
 
@@ -45,27 +45,64 @@ if st.session_state.get('planning_mode') != planning_mode:
 
 if planning_mode == "AI Assisted":
     st.subheader("AI-Assisted Schedule")
-    wake_time = st.time_input("Wake-up Time")
-    work_hours = st.slider("Work Duration (hours)", 4, 12, 8)
-    transport_duration = st.slider("Commute Time (hours)", 0.5, 3.0, 1.0)
+    
+    preferred_wake_time = st.time_input("Preferred Wake-up Time", value=time(7, 0))  # Default 7 AM
     sleep_goal = st.slider("Sleep Duration (hours)", 4, 10, 7)
 
-    if wake_time:
-        wake_datetime = datetime.combine(datetime.today(), wake_time)
-        breakfast_time = (wake_datetime + timedelta(minutes=30)).time().strftime("%H:%M")
-        lunch_time = (wake_datetime + timedelta(hours=work_hours // 2)).time().strftime("%H:%M")
-        dinner_time = (wake_datetime + timedelta(hours=work_hours + transport_duration + 1)).time().strftime("%H:%M")
-        sleep_time = (wake_datetime + timedelta(hours=sleep_goal)).time().strftime("%H:%M")
+    responsibilities = []
 
-        st.session_state['schedule'] = [
-            ("Monday", wake_time.strftime("%H:%M"), sleep_time, "Sleep"),
-            ("Monday", breakfast_time, lunch_time, "Home"),
-            ("Monday", lunch_time, dinner_time, "Work"),
-            ("Monday", dinner_time, sleep_time, "Trans"),
-        ]
+    while True:
+        responsibility_type = st.selectbox(f"Responsibility #{len(responsibilities) + 1} Type", ["Work", "School", "Transportation", "Other"], key=f"type_{len(responsibilities)}")
+        start_time = st.time_input(f"Responsibility #{len(responsibilities) + 1} Start Time", key=f"start_{len(responsibilities)}", value=None)
+        duration = st.number_input(f"Responsibility #{len(responsibilities) + 1} Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, key=f"duration_{len(responsibilities)}", value=None)
+
+        if start_time is not None and duration is not None:
+          responsibilities.append((responsibility_type, start_time, duration))
+
+        add_more = st.checkbox(f"Add another responsibility #{len(responsibilities) + 1}?", key=f"add_another_{len(responsibilities)}")
+
+        if not add_more:
+            break
+
+
+    if st.button("Generate Schedule"):
+
+        schedule = []
+        
+        # Calculate optimal sleep time
+        preferred_wake_datetime = datetime.combine(datetime.today(), preferred_wake_time)
+        sleep_datetime = preferred_wake_datetime - timedelta(hours=sleep_goal)
+        sleep_time = sleep_datetime.time().strftime("%H:%M")
+        
+        schedule.append(("Monday", sleep_time, preferred_wake_time.strftime("%H:%M"), "Sleep"))
+
+        # Add responsibilities
+        current_time = preferred_wake_datetime
+        for r_type, r_start, r_duration in responsibilities:
+          r_start_dt = datetime.combine(datetime.today(),r_start)
+          if current_time <= r_start_dt:
+            schedule.append(("Monday", current_time.strftime("%H:%M"), r_start_dt.strftime("%H:%M"), "Home"))
+
+          r_end_time_dt = r_start_dt + timedelta(hours=r_duration)
+          schedule.append(("Monday", r_start_dt.strftime("%H:%M"), r_end_time_dt.strftime("%H:%M"), r_type))
+
+          current_time = r_end_time_dt
+
+        # Calculate dinner time
+        dinner_time = current_time + timedelta(hours=2)
+        if dinner_time > sleep_datetime:
+          schedule.append(("Monday", current_time.strftime("%H:%M"), sleep_time, "Home"))
+        else:
+          schedule.append(("Monday", current_time.strftime("%H:%M"), dinner_time.strftime("%H:%M"), "Home"))
+          schedule.append(("Monday", dinner_time.strftime("%H:%M"), sleep_time, "Home"))
+
+
+        st.session_state['schedule'] = schedule
         st.success("AI-assisted schedule generated!")
 
-else:
+
+
+else:  # Fully Manual Planner
     # Manual user inputs
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -100,13 +137,14 @@ else:
         else:
             st.error("Please enter valid start and end times.")
 
+
 # Display current schedule with edit and delete buttons
 if st.session_state['schedule']:
     st.subheader("Current Schedule")
     for index, entry in enumerate(st.session_state['schedule']):
         color_display = st.session_state['custom_colors'].get(entry[3], colors.get(entry[3], 'blue'))
         st.write(f"{index + 1}. {entry[0]}: {entry[1]} to {entry[2]} - {entry[3]} ({color_display})")
-        
+
         col1, col2 = st.columns([1, 1])
         with col1:
             if st.button(f"Edit {index + 1}"):
