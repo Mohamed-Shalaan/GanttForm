@@ -29,11 +29,19 @@ if 'schedule' not in st.session_state:
     st.session_state['schedule'] = []
 if 'custom_colors' not in st.session_state:
     st.session_state['custom_colors'] = {}
+if 'planning_mode' not in st.session_state:
+     st.session_state['planning_mode'] = 'Fully Manual Planner'
 
 st.title("Weekly Schedule Plot Generator")
 
 # Option for AI-assisted planning
 planning_mode = st.radio("Select Planning Mode", ("Fully Manual Planner", "AI Assisted"))
+
+# Clear the schedule when planning modes are changed, also re-initialise custom colors
+if st.session_state.get('planning_mode') != planning_mode:
+        st.session_state['schedule'] = []
+        st.session_state['custom_colors'] = {}
+        st.session_state['planning_mode'] = planning_mode
 
 if planning_mode == "AI Assisted":
     st.subheader("AI-Assisted Schedule")
