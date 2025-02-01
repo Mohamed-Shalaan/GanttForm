@@ -17,12 +17,17 @@ def parse_time(time_str):
         return 0
 
 # Backend Functions for Optimum Recommendations
-def calculate_sleep_time(fixed_obligations):
+def validate_schedule(schedule):
+    days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    missing_days = [day for day in days if not any(entry[0] == day for entry in schedule)]
+    return missing_days
+
+def calculate_sleep_time(schedule):
     # Find the earliest start time and latest end time from obligations
-    if not fixed_obligations:
+    if not schedule:
         return None, None
-    start_times = [datetime.strptime(obligation[1], "%H:%M").time() for obligation in fixed_obligations]
-    end_times = [datetime.strptime(obligation[2], "%H:%M").time() for obligation in fixed_obligations]
+    start_times = [datetime.strptime(entry[1], "%H:%M").time() for entry in schedule]
+    end_times = [datetime.strptime(entry[2], "%H:%M").time() for entry in schedule]
     earliest_start = min(start_times)
     latest_end = max(end_times)
     
@@ -37,24 +42,25 @@ def schedule_meals(wake_up_time, bedtime, num_meals):
     meal_times = [datetime.combine(datetime.today(), wake_up_time) + interval * (i + 1) for i in range(num_meals)]
     return [meal.time() for meal in meal_times]
 
-def schedule_workout(free_slots, workout_duration):
+def schedule_workout(schedule, workout_duration):
+    free_slots = calculate_free_slots(schedule)
     for slot in free_slots:
         if slot[1] - slot[0] >= workout_duration:
             return (slot[0], slot[0] + workout_duration)
     return None
 
-def calculate_free_slots(fixed_obligations, wake_up_time, bedtime):
+def calculate_free_slots(schedule):
     free_slots = []
-    fixed_obligations.sort()  # Sort by start time
-    previous_end = datetime.combine(datetime.today(), wake_up_time)
-    for obligation in fixed_obligations:
-        obligation_start = datetime.combine(datetime.today(), datetime.strptime(obligation[1], "%H:%M").time())
-        obligation_end = datetime.combine(datetime.today(), datetime.strptime(obligation[2], "%H:%M").time())
-        if obligation_start > previous_end:
-            free_slots.append((previous_end, obligation_start))
-        previous_end = obligation_end
-    if previous_end < datetime.combine(datetime.today(), bedtime):
-        free_slots.append((previous_end, datetime.combine(datetime.today(), bedtime)))
+    schedule.sort(key=lambda x: datetime.strptime(x[1], "%H:%M"))  # Sort by start time
+    previous_end = datetime.combine(datetime.today(), time(0, 0))  # Start of day
+    for entry in schedule:
+        start_time = datetime.combine(datetime.today(), datetime.strptime(entry[1], "%H:%M").time())
+        end_time = datetime.combine(datetime.today(), datetime.strptime(entry[2], "%H:%M").time())
+        if start_time > previous_end:
+            free_slots.append((previous_end, start_time))
+        previous_end = end_time
+    if previous_end < datetime.combine(datetime.today(), time(23, 59)):
+        free_slots.append((previous_end, datetime.combine(datetime.today(), time(23, 59))))
     return free_slots
 
 # Color coding for activities
@@ -115,34 +121,33 @@ if st.button("Add to Schedule"):
 # Optimum Recommendations Panel
 st.sidebar.header("Optimum Recommendations")
 if st.session_state['schedule']:
-    if st.sidebar.button("Recommend Sleep Timing"):
-        wake_up_time, bedtime = calculate_sleep_time(st.session_state['schedule'])
-        if wake_up_time and bedtime:
-            st.sidebar.write(f"**Recommended Sleep Timing:** {wake_up_time.strftime('%H:%M')} - {bedtime.strftime('%H:%M')}")
-        else:
-            st.sidebar.write("Unable to recommend sleep timing. Add more obligations.")
+    missing_days = validate_schedule(st.session_state['schedule'])
+    if missing_days:
+        st.sidebar.warning(f"Please add mandatory activities for the following days: {', '.join(missing_days)}")
+    else:
+        if st.sidebar.button("Recommend Sleep Timing"):
+            wake_up_time, bedtime = calculate_sleep_time(st.session_state['schedule'])
+            if wake_up_time and bedtime:
+                st.sidebar.write(f"**Recommended Sleep Timing:** {wake_up_time.strftime('%H:%M')} - {bedtime.strftime('%H:%M')}")
+            else:
+                st.sidebar.write("Unable to recommend sleep timing. Add more obligations.")
 
-    num_meals = st.sidebar.number_input("Number of Meals per Day", min_value=1, max_value=6, value=3)
-    if st.sidebar.button("Recommend Meal Timing"):
-        wake_up_time, bedtime = calculate_sleep_time(st.session_state['schedule'])
-        if wake_up_time and bedtime:
-            meal_times = schedule_meals(wake_up_time, bedtime, num_meals)
-            st.sidebar.write("**Recommended Meal Times:**")
-            for i, meal_time in enumerate(meal_times):
-                st.sidebar.write(f"Meal {i+1}: {meal_time.strftime('%H:%M')}")
+        num_meals = st.sidebar.number_input("Number of Meals per Day", min_value=1, max_value=6, value=3)
+        if st.sidebar.button("Recommend Meal Timing"):
+            wake_up_time, bedtime = calculate_sleep_time(st.session_state['schedule'])
+            if wake_up_time and bedtime:
+                meal_times = schedule_meals(wake_up_time, bedtime, num_meals)
+                st.sidebar.write("**Recommended Meal Times:**")
+                for i, meal_time in enumerate(meal_times):
+                    st.sidebar.write(f"Meal {i+1}: {meal_time.strftime('%H:%M')}")
 
-    workout_days = st.sidebar.number_input("Workout Days per Week", min_value=1, max_value=7, value=3)
-    if st.sidebar.button("Recommend Workout Timing"):
-        wake_up_time, bedtime = calculate_sleep_time(st.session_state['schedule'])
-        if wake_up_time and bedtime:
-            free_slots = calculate_free_slots(st.session_state['schedule'], wake_up_time, bedtime)
-            workout_time = schedule_workout(free_slots, timedelta(minutes=60))  # Default 60-minute workout
+        workout_days = st.sidebar.number_input("Workout Days per Week", min_value=1, max_value=7, value=3)
+        if st.sidebar.button("Recommend Workout Timing"):
+            workout_time = schedule_workout(st.session_state['schedule'], timedelta(minutes=60))  # Default 60-minute workout
             if workout_time:
                 st.sidebar.write(f"**Recommended Workout Time:** {workout_time[0].strftime('%H:%M')} - {workout_time[1].strftime('%H:%M')}")
             else:
                 st.sidebar.write("No available slot for workout.")
-        else:
-            st.sidebar.write("Unable to recommend workout timing. Add more obligations.")
 
 # Display current schedule with edit and delete buttons
 if st.session_state['schedule']:
