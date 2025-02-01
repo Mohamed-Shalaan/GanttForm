@@ -65,83 +65,73 @@ if 'schedule' not in st.session_state:
     st.session_state['schedule'] = []
 if 'custom_colors' not in st.session_state:
     st.session_state['custom_colors'] = {}
-if 'planning_mode' not in st.session_state:
-    st.session_state['planning_mode'] = 'Fully Manual Planner'
 
 st.title("Weekly Schedule Plot Generator")
 
-# Option for planning mode
-planning_mode = st.radio("Select Planning Mode", ("Fully Manual Planner", "Optimum Recommendations"))
-
-# Clear the schedule when planning modes are changed
-if st.session_state.get('planning_mode') != planning_mode:
-    st.session_state['schedule'] = []
-    st.session_state['custom_colors'] = {}
-    st.session_state['planning_mode'] = planning_mode
-
 # Manual Planner
-if planning_mode == "Fully Manual Planner":
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
-    with col2:
-        start_time = st.time_input("Start Time", value=None, key="start")
-    with col3:
-        duration = st.number_input("Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, value=1.0, key="duration")
-    with col4:
-        activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    day = st.selectbox("Day", ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])
+with col2:
+    start_time = st.time_input("Start Time", value=None, key="start")
+with col3:
+    duration = st.number_input("Duration (hours)", min_value=0.5, max_value=12.0, step=0.5, value=1.0, key="duration")
+with col4:
+    activity = st.selectbox("Activity", list(colors.keys()) + ["Custom Activity"])
 
-    if activity == "Custom Activity":
-        custom_activity = st.text_input("Custom Activity Name")
-        activity_color = st.color_picker("Pick a Color", value="#0000FF")
-        if custom_activity and activity_color:
-            if custom_activity not in st.session_state['custom_colors']:
-                st.session_state['custom_colors'][custom_activity] = activity_color
-            elif st.session_state['custom_colors'][custom_activity] != activity_color:
-                st.session_state['custom_colors'][custom_activity] = activity_color
+if activity == "Custom Activity":
+    custom_activity = st.text_input("Custom Activity Name")
+    activity_color = st.color_picker("Pick a Color", value="#0000FF")
+    if custom_activity and activity_color:
+        if custom_activity not in st.session_state['custom_colors']:
+            st.session_state['custom_colors'][custom_activity] = activity_color
+        elif st.session_state['custom_colors'][custom_activity] != activity_color:
+            st.session_state['custom_colors'][custom_activity] = activity_color
+else:
+    custom_activity = activity_color = None
+
+# Add to schedule
+if st.button("Add to Schedule"):
+    if custom_activity and activity_color:
+        activity = custom_activity  # Use the custom activity
+
+    if start_time and duration:
+        start_time_str = start_time.strftime("%H:%M")
+        start_datetime = datetime.combine(datetime.today(), start_time)
+        end_datetime = start_datetime + timedelta(hours=duration)
+        end_time_str = end_datetime.time().strftime("%H:%M")
+        st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
+        st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
     else:
-        custom_activity = activity_color = None
+        st.error("Please enter valid start time and duration.")
 
-    # Add to schedule
-    if st.button("Add to Schedule"):
-        if custom_activity and activity_color:
-            activity = custom_activity  # Use the custom activity
+# Optimum Recommendations Panel
+st.sidebar.header("Optimum Recommendations")
+wake_up_time = st.sidebar.time_input("Preferred Wake-up Time", value=time(7, 0))
+bedtime = st.sidebar.time_input("Preferred Bedtime", value=time(22, 0))
+num_meals = st.sidebar.number_input("Number of Meals", min_value=1, max_value=6, value=3)
+workout_duration = st.sidebar.number_input("Workout Duration (minutes)", min_value=15, max_value=120, value=60)
 
-        if start_time and duration:
-            start_time_str = start_time.strftime("%H:%M")
-            start_datetime = datetime.combine(datetime.today(), start_time)
-            end_datetime = start_datetime + timedelta(hours=duration)
-            end_time_str = end_datetime.time().strftime("%H:%M")
-            st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
-            st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
-        else:
-            st.error("Please enter valid start time and duration.")
+if st.sidebar.button("Generate Recommendations"):
+    # Convert inputs to datetime
+    wake_up_time = datetime.combine(datetime.today(), wake_up_time)
+    bedtime = datetime.combine(datetime.today(), bedtime)
 
-# Optimum Recommendations
-elif planning_mode == "Optimum Recommendations":
-    st.subheader("Optimum Recommendations Settings")
-    wake_up_time = st.time_input("Preferred Wake-up Time", value=time(7, 0))
-    bedtime = st.time_input("Preferred Bedtime", value=time(22, 0))
-    num_meals = st.number_input("Number of Meals", min_value=1, max_value=6, value=3)
-    workout_duration = st.number_input("Workout Duration (minutes)", min_value=15, max_value=120, value=60)
+    # Calculate sleep, meals, and free slots
+    wake_up_time, bedtime = calculate_sleep_time(wake_up_time, bedtime)
+    meal_times = schedule_meals(wake_up_time, bedtime, num_meals)
+    free_slots = calculate_free_slots(st.session_state['schedule'], wake_up_time, bedtime)
+    workout_time = schedule_workout(free_slots, timedelta(minutes=workout_duration))
 
-    if st.button("Generate Optimum Schedule"):
-        # Convert inputs to datetime
-        wake_up_time = datetime.combine(datetime.today(), wake_up_time)
-        bedtime = datetime.combine(datetime.today(), bedtime)
-
-        # Calculate sleep, meals, and free slots
-        wake_up_time, bedtime = calculate_sleep_time(wake_up_time, bedtime)
-        meal_times = schedule_meals(wake_up_time, bedtime, num_meals)
-        free_slots = calculate_free_slots(st.session_state['schedule'], wake_up_time, bedtime)
-        workout_time = schedule_workout(free_slots, timedelta(minutes=workout_duration))
-
-        # Add recommendations to the schedule
-        st.session_state['schedule'].append(("Sleep", wake_up_time.strftime("%H:%M"), bedtime.strftime("%H:%M")))
-        for i, meal_time in enumerate(meal_times):
-            st.session_state['schedule'].append((f"Meal {i+1}", meal_time.strftime("%H:%M"), (meal_time + timedelta(minutes=30)).strftime("%H:%M")))
-        if workout_time:
-            st.session_state['schedule'].append(("Workout", workout_time[0].strftime("%H:%M"), workout_time[1].strftime("%H:%M")))
+    # Display recommendations
+    st.sidebar.subheader("Your Recommendations")
+    st.sidebar.write(f"**Sleep:** {wake_up_time.strftime('%H:%M')} - {bedtime.strftime('%H:%M')}")
+    for i, meal_time in enumerate(meal_times):
+        st.sidebar.write(f"**Meal {i+1}:** {meal_time.strftime('%H:%M')} - {(meal_time + timedelta(minutes=30)).strftime('%H:%M')}")
+    if workout_time:
+        st.sidebar.write(f"**Workout:** {workout_time[0].strftime('%H:%M')} - {workout_time[1].strftime('%H:%M')}")
+    else:
+        st.sidebar.write("**Workout:** No available slot found.")
 
 # Display current schedule with edit and delete buttons
 if st.session_state['schedule']:
