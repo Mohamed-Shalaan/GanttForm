@@ -16,6 +16,10 @@ def parse_time(time_str):
         st.error("Invalid time format. Please use HH:MM.")
         return 0
 
+# Function to check for overlapping activities
+def is_overlap(new_start, new_end, existing_start, existing_end):
+    return not (new_end <= existing_start or new_start >= existing_end)
+
 # Backend Functions for Optimum Recommendations
 def validate_schedule(schedule):
     days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -142,8 +146,22 @@ if st.button("Add to Schedule"):
         start_datetime = datetime.combine(datetime.today(), start_time)
         end_datetime = start_datetime + timedelta(hours=duration)
         end_time_str = end_datetime.time().strftime("%H:%M")
-        st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
-        st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
+
+        # Check for overlapping activities
+        overlap = False
+        for entry in st.session_state['schedule']:
+            if entry[0] == day:  # Only check activities on the same day
+                existing_start = datetime.combine(datetime.today(), datetime.strptime(entry[1], "%H:%M").time())
+                existing_end = datetime.combine(datetime.today(), datetime.strptime(entry[2], "%H:%M").time())
+                if is_overlap(start_datetime, end_datetime, existing_start, existing_end):
+                    overlap = True
+                    break
+
+        if overlap:
+            st.error("This activity overlaps with an existing activity. Please choose a different time.")
+        else:
+            st.session_state['schedule'].append((day, start_time_str, end_time_str, activity))
+            st.success(f"Added: {day} from {start_time_str} to {end_time_str} as {activity}")
     else:
         st.error("Please enter valid start time and duration.")
 
@@ -179,13 +197,26 @@ if 'edit_index' in st.session_state:
         start_datetime = datetime.combine(datetime.today(), edit_start_time)
         end_datetime = start_datetime + timedelta(hours=edit_duration)
         end_time_str = end_datetime.time().strftime("%H:%M")
-        updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), end_time_str, edit_activity)
 
-        st.session_state['schedule'][st.session_state['edit_index']] = updated_entry
-        del st.session_state['edit_index']  # Clear edit state
-        del st.session_state['edit_entry']
-        st.success("Entry updated!")
-        st.rerun()
+        # Check for overlapping activities (excluding the current entry being edited)
+        overlap = False
+        for i, entry in enumerate(st.session_state['schedule']):
+            if i != st.session_state['edit_index'] and entry[0] == edit_day:  # Only check activities on the same day
+                existing_start = datetime.combine(datetime.today(), datetime.strptime(entry[1], "%H:%M").time())
+                existing_end = datetime.combine(datetime.today(), datetime.strptime(entry[2], "%H:%M").time())
+                if is_overlap(start_datetime, end_datetime, existing_start, existing_end):
+                    overlap = True
+                    break
+
+        if overlap:
+            st.error("This activity overlaps with an existing activity. Please choose a different time.")
+        else:
+            updated_entry = (edit_day, edit_start_time.strftime("%H:%M"), end_time_str, edit_activity)
+            st.session_state['schedule'][st.session_state['edit_index']] = updated_entry
+            del st.session_state['edit_index']  # Clear edit state
+            del st.session_state['edit_entry']
+            st.success("Entry updated!")
+            st.rerun()
 
 # Plot schedule
 if st.session_state['schedule']:
