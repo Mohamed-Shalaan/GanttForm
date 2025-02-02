@@ -93,7 +93,7 @@ def schedule_workout(schedule, workout_duration):
 colors = {
     "Work": 'red',
     "Home": 'green',
-    "Trans": '#B61515',
+    "Trans": '#A8ADB3',
     "Sleep": '#AB10B4',
     "Meal": '#FFA500',
     "Workout": '#0000FF',
@@ -118,27 +118,24 @@ if st.button("Clear Schedule", key="clear_schedule", help="This will reset your 
 st.sidebar.header("Optimum Recommendations")
 
 # Sleep Timing
-st.sidebar.subheader("Sleep Timing")
-st.sidebar.write("**Recommended Sleep Duration:** 7–9 hours per night.")
-st.sidebar.write("**Tips:**")
-st.sidebar.write("- Aim to go to bed and wake up at the same time every day.")
-st.sidebar.write("- Avoid screens 1 hour before bedtime.")
+st.sidebar.subheader("Sleep Timing 🌙")
+st.sidebar.write("- Aim for 7–9 hours daily.")
+st.sidebar.write("- Cut screens 1 hour before bed.")
 st.sidebar.markdown("---")  # Visual separator
 
 # Meal Timing
-st.sidebar.subheader("Meal Timing")
-st.sidebar.write("**Recommended Meal Frequency:** 3 meals + 2 snacks per day.")
-st.sidebar.write("**Tips:**")
-st.sidebar.write("- Eat breakfast within 1–2 hours of waking up.")
-st.sidebar.write("- Space meals evenly throughout the day.")
+st.sidebar.subheader("Meal Timing 🍛")
+st.sidebar.write("**Meal Frequency:** 3 meals + 2 snacks.")
+st.sidebar.write("- **Breakfast**: 1–2 hours of waking up.")
+st.sidebar.write("- **Lunch**: 4 hours from break fast.")
+st.sidebar.write("- **Dinner**: 3 hours before sleep time.")
 st.sidebar.markdown("---")  # Visual separator
 
 # Workout Timing
-st.sidebar.subheader("Workout Timing")
-st.sidebar.write("**Recommended Workout Duration:** 30–60 minutes per session.")
-st.sidebar.write("**Tips:**")
-st.sidebar.write("- Schedule workouts during your peak energy times (e.g., morning or afternoon).")
-st.sidebar.write("- Allow at least 1–2 hours after a meal before exercising.")
+st.sidebar.subheader("Workout Timing 🏋🏻‍♀️")
+st.sidebar.write("- Workout during peak energy times (e.g., morning or afternoon).")
+st.sidebar.write("- Pre-Workout 30-60m.")
+st.sidebar.write("- Post-Workout 30-90m.")
 st.sidebar.markdown("---")  # Visual separator
 
 # Manual Planner
@@ -192,8 +189,57 @@ if st.button("Add to Schedule"):
     else:
         st.error("Please enter valid start time and duration.")
 
-# Display current schedule with edit and delete buttons
+# Plot schedule
 if st.session_state['schedule']:
+    day_labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][::-1]
+    day_indices = {day: i for i, day in enumerate(day_labels)}
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+
+    for day, start, end, status in st.session_state['schedule']:
+        start_time = parse_time(start)
+        end_time = parse_time(end)
+        duration = end_time - start_time if end_time > start_time else (24 - start_time + end_time)
+        color = st.session_state['custom_colors'].get(status, colors.get(status, 'blue'))
+
+        ax.broken_barh([(start_time, duration)], (day_indices[day] - 0.4, 0.8), facecolors=color)
+        ax.text(
+            start_time + duration / 2,
+            day_indices[day],
+            f"{status}\n{duration:.1f}h",
+            ha='center', va='center',
+            fontsize=9, color='white', weight='bold'
+        )
+
+    # Format the plot
+    ax.set_yticks(range(len(day_labels)))
+    ax.set_yticklabels(day_labels)
+    ax.set_xticks(range(0, 25, 3))
+    ax.set_xticklabels([f"{i}:00" for i in range(0, 25, 3)])
+    ax.set_xlim(0, 24)
+    ax.set_xlabel("Time of Day")
+    ax.set_title("Weekly Schedule")
+
+    grid_linestyle = st.selectbox("Grid Line Style", ['-', '--', '-.', ':'])
+    grid_alpha = st.slider("Grid Line Transparency", 0.1, 1.0, 0.5)
+    plt.grid(True, linestyle=grid_linestyle, alpha=grid_alpha)
+
+    # Display plot
+    st.pyplot(fig)
+
+    # Option to download the schedule as an image
+    buf = BytesIO()
+    plt.savefig(buf, format="png", bbox_inches="tight")
+    buf.seek(0)
+    st.download_button(
+        label="Download Schedule as Image",
+        data=buf,
+        file_name="schedule_plot.png",
+        mime="image/png",
+    )
+    buf.close()
+
+    # Display current schedule with edit and delete buttons
     st.subheader("Current Schedule")
     for index, entry in enumerate(st.session_state['schedule']):
         color_display = st.session_state['custom_colors'].get(entry[3], colors.get(entry[3], 'blue'))
@@ -244,53 +290,3 @@ if 'edit_index' in st.session_state:
             del st.session_state['edit_entry']
             st.success("Entry updated!")
             st.rerun()
-
-# Plot schedule
-if st.session_state['schedule']:
-    day_labels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][::-1]
-    day_indices = {day: i for i, day in enumerate(day_labels)}
-
-    fig, ax = plt.subplots(figsize=(14, 6))
-
-    for day, start, end, status in st.session_state['schedule']:
-        start_time = parse_time(start)
-        end_time = parse_time(end)
-        duration = end_time - start_time if end_time > start_time else (24 - start_time + end_time)
-        color = st.session_state['custom_colors'].get(status, colors.get(status, 'blue'))
-
-        ax.broken_barh([(start_time, duration)], (day_indices[day] - 0.4, 0.8), facecolors=color)
-        ax.text(
-            start_time + duration / 2,
-            day_indices[day],
-            f"{status}\n{duration:.1f}h",
-            ha='center', va='center',
-            fontsize=9, color='white', weight='bold'
-        )
-
-    # Format the plot
-    ax.set_yticks(range(len(day_labels)))
-    ax.set_yticklabels(day_labels)
-    ax.set_xticks(range(0, 25, 3))
-    ax.set_xticklabels([f"{i}:00" for i in range(0, 25, 3)])
-    ax.set_xlim(0, 24)
-    ax.set_xlabel("Time of Day")
-    ax.set_title("Weekly Schedule")
-
-    grid_linestyle = st.selectbox("Grid Line Style", ['-', '--', '-.', ':'])
-    grid_alpha = st.slider("Grid Line Transparency", 0.1, 1.0, 0.5)
-    plt.grid(True, linestyle=grid_linestyle, alpha=grid_alpha)
-
-    # Display plot
-    st.pyplot(fig)
-
-    # Option to download the schedule as an image
-    buf = BytesIO()
-    plt.savefig(buf, format="png", bbox_inches="tight")
-    buf.seek(0)
-    st.download_button(
-        label="Download Schedule as Image",
-        data=buf,
-        file_name="schedule_plot.png",
-        mime="image/png",
-    )
-    buf.close()
