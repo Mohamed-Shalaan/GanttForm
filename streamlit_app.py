@@ -114,6 +114,33 @@ if st.button("Clear Schedule", key="clear_schedule", help="This will reset your 
     st.success("Schedule cleared!")
     st.rerun()
 
+# Optimum Recommendations in Sidebar
+st.sidebar.header("Optimum Recommendations")
+
+# Sleep Timing
+st.sidebar.subheader("Sleep Timing")
+st.sidebar.write("**Recommended Sleep Duration:** 7–9 hours per night.")
+st.sidebar.write("**Tips:**")
+st.sidebar.write("- Aim to go to bed and wake up at the same time every day.")
+st.sidebar.write("- Avoid screens 1 hour before bedtime.")
+st.sidebar.markdown("---")  # Visual separator
+
+# Meal Timing
+st.sidebar.subheader("Meal Timing")
+st.sidebar.write("**Recommended Meal Frequency:** 3 meals + 2 snacks per day.")
+st.sidebar.write("**Tips:**")
+st.sidebar.write("- Eat breakfast within 1–2 hours of waking up.")
+st.sidebar.write("- Space meals evenly throughout the day.")
+st.sidebar.markdown("---")  # Visual separator
+
+# Workout Timing
+st.sidebar.subheader("Workout Timing")
+st.sidebar.write("**Recommended Workout Duration:** 30–60 minutes per session.")
+st.sidebar.write("**Tips:**")
+st.sidebar.write("- Schedule workouts during your peak energy times (e.g., morning or afternoon).")
+st.sidebar.write("- Allow at least 1–2 hours after a meal before exercising.")
+st.sidebar.markdown("---")  # Visual separator
+
 # Manual Planner
 col1, col2, col3, col4 = st.columns(4)
 with col1:
