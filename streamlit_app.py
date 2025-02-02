@@ -220,9 +220,9 @@ if st.session_state['schedule']:
     ax.set_xlabel("Time of Day")
     ax.set_title("Weekly Schedule")
 
-    grid_linestyle = st.selectbox("Grid Line Style", ['-', '--', '-.', ':'])
-    grid_alpha = st.slider("Grid Line Transparency", 0.1, 1.0, 0.5)
-    plt.grid(True, linestyle=grid_linestyle, alpha=grid_alpha)
+    # grid_linestyle = st.selectbox("Grid Line Style", ['-', '--', '-.', ':'])
+    # grid_alpha = st.slider("Grid Line Transparency", 0.1, 1.0, 0.5)
+    # plt.grid(True, linestyle=grid_linestyle, alpha=grid_alpha)
 
     # Display plot
     st.pyplot(fig)
